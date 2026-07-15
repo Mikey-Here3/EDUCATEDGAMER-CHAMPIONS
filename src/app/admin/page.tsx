@@ -2,9 +2,14 @@
 
 import { useState, useEffect, startTransition } from "react";
 import { useSession } from "next-auth/react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { getTournaments, updateTournament } from "@/actions/tournament.actions";
-import { getRegistrations, updatePaymentStatus, updateRegistrationStatus } from "@/actions/registration.actions";
+import {
+  getRegistrations,
+  updatePaymentStatus,
+  updateRegistrationStatus,
+  deleteRegistration,
+} from "@/actions/registration.actions";
 import { GlowCard } from "@/components/shared/GlowCard";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { NeonButton } from "@/components/shared/NeonButton";
@@ -26,6 +31,11 @@ import {
   Volume2,
   Tv,
   Image as ImageIcon,
+  Search,
+  Trash2,
+  ExternalLink,
+  Info,
+  SlidersHorizontal,
 } from "lucide-react";
 
 // Mock Data for GvG Fallback
@@ -33,8 +43,8 @@ const mockActiveTournament = {
   id: "gvg-ff-cup-s4",
   name: "Educated Gamer Guild vs Guild Championship",
   game: "Free Fire",
-  prizePool: "₹25,000",
-  registeredCount: 36,
+  prizePool: "9,000 Diamonds",
+  registeredCount: 2,
   maxSlots: 48,
   status: "OPEN",
   mode: "Squad (GvG)",
@@ -51,8 +61,8 @@ const mockRegistrations = [
     playerName: "Aman Sharma",
     gamertag: "MambaGaming",
     email: "aman@gmail.com",
-    phone: "+91 9876543210",
-    teamName: "Team Soul",
+    phone: "+92 300 1234567",
+    teamName: "Team Soul GvG",
     type: "SQUAD",
     paymentStatus: "PENDING",
     status: "PENDING",
@@ -63,6 +73,7 @@ const mockRegistrations = [
       { playerName: "Rohan Das", gamertag: "SoulRohan", gameUID: "67812903" },
       { playerName: "Ketan Mehta", gamertag: "SoulKetan", gameUID: "12890374" },
       { playerName: "Yash Sen", gamertag: "SoulYash", gameUID: "90127394" },
+      { playerName: "Dev Verma", gamertag: "SoulDev", gameUID: "43890123" },
     ],
   },
   {
@@ -70,7 +81,7 @@ const mockRegistrations = [
     playerName: "Vikram Rathore",
     gamertag: "ViperYT",
     email: "vikram@gmail.com",
-    phone: "+91 9876543211",
+    phone: "+92 315 7654321",
     teamName: "TSG Army GvG",
     type: "SQUAD",
     paymentStatus: "VERIFIED",
@@ -82,6 +93,7 @@ const mockRegistrations = [
       { playerName: "Amit Roy", gamertag: "TSGAmit", gameUID: "3489012" },
       { playerName: "Sumit Dey", gamertag: "TSGSumit", gameUID: "9081234" },
       { playerName: "Rahul Dev", gamertag: "TSGRahul", gameUID: "2349081" },
+      { playerName: "Joy Sen", gamertag: "TSGJoy", gameUID: "1239045" },
     ],
   },
 ];
@@ -92,12 +104,22 @@ export default function AdminPage() {
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<
-    "registrations" | "rooms" | "results" | "standings" | "season" | "content"
+    "registrations" | "rooms" | "results" | "season"
   >("registrations");
 
   // State Data
   const [activeTourney, setActiveTourney] = useState<any>(mockActiveTournament);
   const [registrations, setRegistrations] = useState<any[]>(mockRegistrations);
+
+  // Search & Filter States
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"ALL" | "PENDING" | "CONFIRMED" | "CANCELLED">("ALL");
+
+  // Selected Registration for Inspector Modal
+  const [selectedReg, setSelectedReg] = useState<any | null>(null);
+  
+  // Image Lightbox State
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   // Room Generator States
   const [roomId, setRoomId] = useState("");
@@ -142,18 +164,20 @@ export default function AdminPage() {
     }
   }, [isAdmin]);
 
-  // Handle Verify Registration Action
+  // Handle Verify/Confirm Action
   const handleVerifyRegistration = async (id: string, approve: boolean) => {
     const statusVal = approve ? "CONFIRMED" : "CANCELLED";
     const paymentVal = approve ? "VERIFIED" : "REJECTED";
 
     if (id.startsWith("reg-")) {
       // Mock update
-      setRegistrations(
-        registrations.map((r) =>
-          r.id === id ? { ...r, status: statusVal, paymentStatus: paymentVal } : r
-        )
+      const updated = registrations.map((r) =>
+        r.id === id ? { ...r, status: statusVal, paymentStatus: paymentVal } : r
       );
+      setRegistrations(updated);
+      if (selectedReg && selectedReg.id === id) {
+        setSelectedReg({ ...selectedReg, status: statusVal, paymentStatus: paymentVal });
+      }
       return;
     }
 
@@ -161,11 +185,37 @@ export default function AdminPage() {
     const res = await updateRegistrationStatus(id, statusVal);
     if (res.success) {
       await updatePaymentStatus(id, paymentVal);
-      setRegistrations(
-        registrations.map((r) =>
-          r.id === id ? { ...r, status: statusVal, paymentStatus: paymentVal } : r
-        )
+      const updated = registrations.map((r) =>
+        r.id === id ? { ...r, status: statusVal, paymentStatus: paymentVal } : r
       );
+      setRegistrations(updated);
+      if (selectedReg && selectedReg.id === id) {
+        setSelectedReg({ ...selectedReg, status: statusVal, paymentStatus: paymentVal });
+      }
+    }
+  };
+
+  // Handle Delete Registration Action
+  const handleDeleteRegistration = async (id: string) => {
+    if (!window.confirm("Are you absolutely sure you want to delete this registration? This will delete all team roster data and cannot be undone.")) {
+      return;
+    }
+
+    if (id.startsWith("reg-")) {
+      // Mock delete
+      setRegistrations(registrations.filter((r) => r.id !== id));
+      setSelectedReg(null);
+      return;
+    }
+
+    // Real DB delete
+    const res = await deleteRegistration(id);
+    if (res.success) {
+      setRegistrations(registrations.filter((r) => r.id !== id));
+      setSelectedReg(null);
+      alert("Registration deleted successfully!");
+    } else {
+      alert(res.message || "Failed to delete registration");
     }
   };
 
@@ -173,8 +223,6 @@ export default function AdminPage() {
   const handleGenerateRoom = (e: React.FormEvent) => {
     e.preventDefault();
     setRoomMsg("");
-
-    // Simulate Room credentials push to Captain WhatsApp/Discord
     setRoomMsg(`Room credentials generated and published. Room ID: ${roomId} | PW: ${roomPassword}`);
   };
 
@@ -182,8 +230,6 @@ export default function AdminPage() {
   const handlePostResult = (e: React.FormEvent) => {
     e.preventDefault();
     setResultMsg("");
-
-    // Simulate saving results
     setResultMsg(`Match results posted! Winner: ${winnerGuild} | Runner-up: ${runnerGuild}`);
     setWinnerGuild("");
     setRunnerGuild("");
@@ -228,10 +274,24 @@ export default function AdminPage() {
     });
   };
 
+  // Filter & Search Registrations
+  const filteredRegs = registrations.filter((reg) => {
+    const matchesSearch =
+      (reg.teamName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (reg.playerName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (reg.gamertag || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (reg.phone || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (reg.email || "").toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (filterStatus === "ALL") return matchesSearch;
+    return matchesSearch && reg.status === filterStatus;
+  });
+
   return (
     <div className="min-h-screen bg-[var(--color-bg-deep)] pt-32 pb-20 px-4 relative">
       <div className="max-w-6xl mx-auto space-y-8">
-        {/* Banner */}
+        
+        {/* Banner Title */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-[var(--color-border)] pb-6">
           <div>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary-light)] text-xs font-bold uppercase tracking-wider mb-2 border border-[var(--color-primary)]/20">
@@ -250,7 +310,7 @@ export default function AdminPage() {
           )}
         </div>
 
-        {/* Quick Stats */}
+        {/* Quick Stats Summary Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <GlowCard className="p-4 text-center" hover={false}>
             <Trophy className="w-6 h-6 text-yellow-500 mx-auto mb-2" />
@@ -259,7 +319,7 @@ export default function AdminPage() {
           </GlowCard>
           <GlowCard className="p-4 text-center" hover={false}>
             <Users className="w-6 h-6 text-[var(--color-accent)] mx-auto mb-2" />
-            <p className="text-[10px] text-gray-500 uppercase font-semibold">Applications</p>
+            <p className="text-[10px] text-gray-500 uppercase font-semibold">Total Applications</p>
             <h4 className="text-lg font-bold text-white">{registrations.length}</h4>
           </GlowCard>
           <GlowCard className="p-4 text-center" hover={false}>
@@ -306,77 +366,103 @@ export default function AdminPage() {
 
         {/* Tab Contents */}
         <div className="relative">
-          {/* Tab 1: Registrations */}
+          {/* Tab 1: Registrations & Roster Management */}
           {activeTab === "registrations" && (
             <div className="space-y-6">
+              
+              {/* Search & Filter Bar */}
+              <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-black/40 p-4 border border-[var(--color-border)] rounded-2xl">
+                <div className="relative w-full md:max-w-md">
+                  <Search className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search by Guild Name, Captain, Gamertag, or Phone..."
+                    className="pl-10 pr-4 py-2 text-xs md:text-sm bg-black/60 border border-[var(--color-border)] focus:border-[var(--color-primary)] rounded-xl w-full"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1.5 md:pb-0">
+                  {(["ALL", "PENDING", "CONFIRMED", "CANCELLED"] as const).map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => setFilterStatus(status)}
+                      className={`px-3 py-1.5 text-xs font-bold uppercase rounded-lg border transition-all cursor-pointer whitespace-nowrap ${
+                        filterStatus === status
+                          ? "bg-[var(--color-primary)]/20 text-[var(--color-primary-light)] border-[var(--color-primary)]/40"
+                          : "bg-black/40 text-gray-400 border-white/5 hover:text-white"
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* registrations Table */}
               <div className="glass-card overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface)] text-xs font-bold text-gray-400 uppercase">
                         <th className="p-4">Guild / Captain</th>
-                        <th className="p-4">Roster Members</th>
                         <th className="p-4">WhatsApp Contact</th>
-                        <th className="p-4">Screenshots</th>
+                        <th className="p-4">UID Proof Status</th>
+                        <th className="p-4">Payment</th>
                         <th className="p-4">Status</th>
-                        <th className="p-4 text-center">Action</th>
+                        <th className="p-4 text-center">Manage</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[var(--color-border)] text-sm">
-                      {registrations.length === 0 ? (
+                    <tbody className="divide-y divide-[var(--color-border)] text-xs md:text-sm">
+                      {filteredRegs.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="p-8 text-center text-gray-500">
-                            No team applications submitted.
+                          <td colSpan={6} className="p-12 text-center text-gray-500 font-semibold">
+                            No team applications match the selected filters.
                           </td>
                         </tr>
                       ) : (
-                        registrations.map((reg) => (
-                          <tr key={reg.id} className="hover:bg-[var(--color-surface)] transition-all">
+                        filteredRegs.map((reg) => (
+                          <tr
+                            key={reg.id}
+                            className="hover:bg-[var(--color-surface)]/60 transition-all cursor-pointer group"
+                            onClick={() => setSelectedReg(reg)}
+                          >
                             <td className="p-4">
-                              <p className="font-bold text-white">{reg.teamName || "Solo Player"}</p>
-                              <p className="text-xs text-[var(--color-accent)]">Captain: {reg.playerName} ({reg.gamertag})</p>
-                              <p className="text-[10px] text-gray-500 font-mono">UID: {reg.gameUID}</p>
+                              <p className="font-bold text-white group-hover:text-[var(--color-primary-light)] transition-colors">
+                                {reg.teamName || "Solo Registration"}
+                              </p>
+                              <p className="text-[10px] text-[var(--color-accent)] font-semibold">
+                                Capt: {reg.playerName} ({reg.gamertag})
+                              </p>
                             </td>
                             <td className="p-4">
-                              <div className="text-xs space-y-0.5 text-gray-300">
-                                {reg.teamMembers && reg.teamMembers.length > 0 ? (
-                                  reg.teamMembers.map((m: any, idx: number) => (
-                                    <div key={idx} className="truncate max-w-[180px]">
-                                      • {m.playerName} ({m.gamertag})
-                                    </div>
-                                  ))
-                                ) : (
-                                  <span className="text-gray-500">No extra members</span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="p-4">
-                              <p className="text-xs font-mono">{reg.phone}</p>
+                              <p className="font-mono">{reg.phone || "N/A"}</p>
                               <p className="text-[10px] text-gray-500">{reg.email}</p>
                             </td>
-                            <td className="p-4 space-y-1">
+                            <td className="p-4">
                               {reg.uidScreenshot ? (
-                                <a
-                                  href={reg.uidScreenshot}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-[10px] text-[var(--color-accent)] hover:underline"
-                                >
-                                  <Eye className="w-3 h-3" /> View UID Screenshot
-                                </a>
+                                <span className="inline-flex items-center gap-1 text-[10px] text-green-400 font-bold bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">
+                                  Uploaded
+                                </span>
                               ) : (
-                                <p className="text-[10px] text-red-500">UID Missing</p>
+                                <span className="inline-flex items-center gap-1 text-[10px] text-red-400 font-bold bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
+                                  Missing
+                                </span>
                               )}
-                              {reg.paymentScreenshot && (
-                                <a
-                                  href={reg.paymentScreenshot}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-[10px] text-yellow-500 hover:underline"
-                                >
-                                  <Eye className="w-3 h-3" /> View Payment Proof
-                                </a>
-                              )}
+                            </td>
+                            <td className="p-4">
+                              <span
+                                className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                                  reg.paymentStatus === "VERIFIED"
+                                    ? "bg-green-500/10 text-green-400 border-green-500/20"
+                                    : reg.paymentStatus === "REJECTED"
+                                    ? "bg-red-500/10 text-red-400 border-red-500/20"
+                                    : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                                }`}
+                              >
+                                {reg.paymentStatus}
+                              </span>
                             </td>
                             <td className="p-4">
                               <span
@@ -391,27 +477,23 @@ export default function AdminPage() {
                                 {reg.status}
                               </span>
                             </td>
-                            <td className="p-4 text-center">
-                              {reg.status === "PENDING" ? (
-                                <div className="flex items-center justify-center gap-1.5">
-                                  <button
-                                    onClick={() => handleVerifyRegistration(reg.id, true)}
-                                    className="p-1 rounded bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30 transition-all cursor-pointer"
-                                    title="Verify & Confirm"
-                                  >
-                                    <Check className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleVerifyRegistration(reg.id, false)}
-                                    className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-all cursor-pointer"
-                                    title="Reject Application"
-                                  >
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              ) : (
-                                <span className="text-xs text-gray-500">-</span>
-                              )}
+                            <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={() => setSelectedReg(reg)}
+                                  className="p-1.5 rounded bg-white/5 hover:bg-white/10 text-gray-300 transition-all cursor-pointer"
+                                  title="Inspect Roster & Proofs"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteRegistration(reg.id)}
+                                  className="p-1.5 rounded bg-red-500/5 hover:bg-red-500/15 text-red-400 border border-red-500/20 transition-all cursor-pointer"
+                                  title="Delete Registration"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -620,6 +702,225 @@ export default function AdminPage() {
           )}
         </div>
       </div>
+
+      {/* ═══════════════ DETAILED REGISTRATION INSPECTOR MODAL ═══════════════ */}
+      <AnimatePresence>
+        {selectedReg && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-[var(--color-bg-deep)] border border-[var(--color-primary)]/40 rounded-3xl p-6 md:p-8 space-y-6 scrollbar-thin shadow-[0_0_50px_rgba(123,46,255,0.25)]"
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setSelectedReg(null)}
+                className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Title Header */}
+              <div className="border-b border-[var(--color-border)] pb-4 space-y-1">
+                <span className="text-[10px] text-gray-500 uppercase tracking-widest font-black">Registration Inspector</span>
+                <h2 className="text-2xl md:text-3xl font-black uppercase text-white tracking-wider" style={{ fontFamily: "var(--font-orbitron)" }}>
+                  {selectedReg.teamName || "Solo Player Registration"}
+                </h2>
+                <p className="text-xs text-gray-400 font-mono">ID: {selectedReg.id}</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                
+                {/* Left Column: Captain & Roster details */}
+                <div className="md:col-span-7 space-y-6">
+                  {/* Captain Card */}
+                  <div className="p-4 bg-black/40 border border-white/5 rounded-2xl space-y-3">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-[var(--color-primary-light)] flex items-center gap-1.5">
+                      <Shield className="w-4 h-4" /> Team Captain Details
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="text-gray-500 block uppercase font-semibold text-[10px]">Name</span>
+                        <span className="text-white font-bold">{selectedReg.playerName}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block uppercase font-semibold text-[10px]">Gamertag</span>
+                        <span className="text-white font-bold">{selectedReg.gamertag}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block uppercase font-semibold text-[10px]">Free Fire UID</span>
+                        <span className="text-[var(--color-accent)] font-bold font-mono">{selectedReg.gameUID || "N/A"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block uppercase font-semibold text-[10px]">WhatsApp Phone</span>
+                        <span className="text-white font-bold font-mono">{selectedReg.phone || "N/A"}</span>
+                      </div>
+                      <div className="col-span-2 border-t border-white/5 pt-2">
+                        <span className="text-gray-500 block uppercase font-semibold text-[10px]">Contact Email</span>
+                        <span className="text-white font-bold font-mono">{selectedReg.email}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Roster Members Card */}
+                  <div className="p-4 bg-black/40 border border-white/5 rounded-2xl space-y-3">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-[var(--color-primary-light)] flex items-center gap-1.5">
+                      <Users className="w-4 h-4" /> Squad Roster (4 Members)
+                    </h3>
+                    <div className="space-y-2 text-xs">
+                      {selectedReg.teamMembers && selectedReg.teamMembers.length > 0 ? (
+                        selectedReg.teamMembers.map((member: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center p-2 bg-black/20 rounded border border-white/5">
+                            <div>
+                              <span className="text-gray-400 block text-[10px] font-semibold">Member #{idx + 1}</span>
+                              <span className="text-white font-bold">{member.playerName}</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[var(--color-accent)] block font-bold font-mono">{member.gamertag}</span>
+                              <span className="text-gray-500 block font-mono text-[9px]">UID: {member.gameUID || "N/A"}</span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 text-center py-4 border border-dashed border-white/5 rounded-lg">
+                          No roster members submitted.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Screenshots & Verification Details */}
+                <div className="md:col-span-5 space-y-6">
+                  {/* Screenshots Verification */}
+                  <div className="p-4 bg-black/40 border border-white/5 rounded-2xl space-y-4">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-[var(--color-primary-light)] flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4" /> Screenshot Proofs
+                    </h3>
+
+                    {/* UID Proof Screenshot */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] text-gray-500 uppercase font-semibold block">UID Proof Screenshot</span>
+                      {selectedReg.uidScreenshot ? (
+                        <div className="group relative aspect-video bg-black rounded-lg overflow-hidden border border-white/10 hover:border-[var(--color-accent)]/50 transition-all cursor-pointer">
+                          <img
+                            src={selectedReg.uidScreenshot}
+                            alt="UID Verification Proof"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-all"
+                            onClick={() => setLightboxUrl(selectedReg.uidScreenshot)}
+                          />
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                            <Eye className="w-6 h-6 text-white" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-4 text-center border border-dashed border-red-500/20 bg-red-500/5 text-red-400 text-xs rounded-lg">
+                          No UID screenshot submitted!
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Payment Proof Screenshot */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] text-gray-500 uppercase font-semibold block">EasyPaisa/JazzCash Payment Receipt</span>
+                      {selectedReg.paymentScreenshot ? (
+                        <div className="group relative aspect-video bg-black rounded-lg overflow-hidden border border-white/10 hover:border-yellow-500/50 transition-all cursor-pointer">
+                          <img
+                            src={selectedReg.paymentScreenshot}
+                            alt="Payment Verification Receipt"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-all"
+                            onClick={() => setLightboxUrl(selectedReg.paymentScreenshot)}
+                          />
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                            <Eye className="w-6 h-6 text-white" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-4 text-center border border-dashed border-yellow-500/20 bg-yellow-500/5 text-yellow-400 text-xs rounded-lg">
+                          No payment receipt uploaded (Optional).
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Verification Status controls */}
+                  <div className="p-4 bg-black/40 border border-white/5 rounded-2xl space-y-3">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-white">
+                      Status Controls
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-gray-500 uppercase block font-semibold text-[9px]">Payment Status</span>
+                        <span className="text-white font-bold block">{selectedReg.paymentStatus}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 uppercase block font-semibold text-[9px]">Lobby Status</span>
+                        <span className="text-white font-bold block">{selectedReg.status}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 pt-2 border-t border-white/5">
+                      {selectedReg.status === "PENDING" && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => handleVerifyRegistration(selectedReg.id, true)}
+                            className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold uppercase text-[10px] tracking-wider transition-colors cursor-pointer"
+                          >
+                            <Check className="w-4 h-4" /> Verify & Confirm
+                          </button>
+                          <button
+                            onClick={() => handleVerifyRegistration(selectedReg.id, false)}
+                            className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-red-600/10 hover:bg-red-600/20 border border-red-500/30 text-red-400 font-bold uppercase text-[10px] tracking-wider transition-colors cursor-pointer"
+                          >
+                            <X className="w-4 h-4" /> Reject Team
+                          </button>
+                        </div>
+                      )}
+                      
+                      <button
+                        onClick={() => handleDeleteRegistration(selectedReg.id)}
+                        className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 text-red-400 font-bold uppercase text-[10px] tracking-wider transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" /> Delete Roster Record
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══════════════ LIGHTBOX SCREENSHOT VIEWER ═══════════════ */}
+      <AnimatePresence>
+        {lightboxUrl && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/95 cursor-zoom-out"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative max-w-4xl max-h-[90vh]"
+            >
+              <img
+                src={lightboxUrl}
+                alt="Full Size Verification Receipt"
+                className="max-w-full max-h-[90vh] object-contain rounded-lg border border-white/10"
+              />
+              <button
+                onClick={() => setLightboxUrl(null)}
+                className="absolute top-4 right-4 p-2 rounded-full bg-black/75 hover:bg-black text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

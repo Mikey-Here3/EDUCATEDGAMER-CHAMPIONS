@@ -317,3 +317,52 @@ export async function updatePaymentStatus(
     }
   }
 }
+
+export async function deleteRegistration(id: string): Promise<ActionResponse<void>> {
+  try {
+    const session = await auth()
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return { success: false, message: 'Unauthorized: Admin access required' }
+    }
+
+    if (!id) {
+      return { success: false, message: 'Registration ID is required' }
+    }
+
+    const reg = await prisma.registration.findUnique({
+      where: { id },
+    })
+
+    if (!reg) {
+      return { success: false, message: 'Registration not found' }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.teamMember.deleteMany({
+        where: { registrationId: id },
+      })
+
+      await tx.registration.delete({
+        where: { id },
+      })
+
+      if (reg.status !== 'CANCELLED') {
+        await tx.tournament.update({
+          where: { id: reg.tournamentId },
+          data: { registeredCount: { decrement: 1 } },
+        })
+      }
+    })
+
+    return {
+      success: true,
+      message: 'Registration deleted successfully',
+    }
+  } catch (error) {
+    console.error('[deleteRegistration]', error)
+    return {
+      success: false,
+      message: 'Failed to delete registration',
+    }
+  }
+}
