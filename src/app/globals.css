@@ -1,26 +1,198 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: #7B2EFF;
+  --color-primary-light: #9D5CFF;
+  --color-primary-dark: #5A1DBF;
+  --color-primary-glow: rgba(123, 46, 255, 0.5);
+  --color-accent: #00F0FF;
+  --color-accent-glow: rgba(0, 240, 255, 0.3);
+  --color-bg-deep: #030014;
+  --color-bg-dark: #0A0118;
+  --color-bg-card: #110827;
+  --color-bg-card-hover: #1A0D3A;
+  --color-surface: rgba(123, 46, 255, 0.08);
+  --color-surface-hover: rgba(123, 46, 255, 0.15);
+  --color-border: rgba(123, 46, 255, 0.2);
+  --color-border-bright: rgba(123, 46, 255, 0.5);
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #A78BFA;
+  --color-text-muted: #6B7280;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --font-display: "Orbitron", sans-serif;
+  --font-body: "Inter", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Base Styles ──────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg-deep);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--color-primary);
+  color: white;
+}
+
+/* ─── Custom Scrollbar ────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg-deep);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-primary-dark);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}
+
+/* ─── Glass Card ──────────────────────────────────────── */
+.glass-card {
+  background: rgba(17, 8, 39, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+.glass-card:hover {
+  border-color: var(--color-border-bright);
+  box-shadow: 0 0 30px var(--color-primary-glow),
+              inset 0 0 30px rgba(123, 46, 255, 0.05);
+}
+
+/* ─── Neon Effects ───────────────────────────────────── */
+.neon-border {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+.neon-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--color-primary), transparent, var(--color-accent));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.neon-border:hover::before {
+  opacity: 1;
+}
+
+.neon-text {
+  text-shadow: 0 0 10px var(--color-primary-glow),
+               0 0 20px var(--color-primary-glow),
+               0 0 40px rgba(123, 46, 255, 0.3);
+}
+
+.neon-glow {
+  box-shadow: 0 0 15px var(--color-primary-glow),
+              0 0 30px rgba(123, 46, 255, 0.2);
+}
+
+/* ─── Gradient Backgrounds ───────────────────────────── */
+.gradient-bg {
+  background: linear-gradient(135deg, var(--color-bg-deep), var(--color-bg-dark), var(--color-bg-card));
+  background-size: 400% 400%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-primary-light), var(--color-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Keyframe Animations ────────────────────────────── */
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 5px var(--color-primary-glow), 0 0 15px rgba(123, 46, 255, 0.2);
+  }
+  50% { 
+    box-shadow: 0 0 20px var(--color-primary-glow), 0 0 40px rgba(123, 46, 255, 0.3);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes glitch {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+}
+
+@keyframes border-glow {
+  0%, 100% { border-color: rgba(123, 46, 255, 0.2); }
+  50% { border-color: rgba(123, 46, 255, 0.6); }
+}
+
+@keyframes scroll-hint {
+  0%, 100% { transform: translateY(0); opacity: 1; }
+  50% { transform: translateY(10px); opacity: 0.5; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Utility Classes ────────────────────────────────── */
+.animate-glow-pulse { animation: glow-pulse 2s ease-in-out infinite; }
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-shimmer { animation: shimmer 2s linear infinite; }
+.animate-glitch { animation: glitch 0.3s ease-in-out; }
+.animate-border-glow { animation: border-glow 3s ease-in-out infinite; }
+.animate-scroll-hint { animation: scroll-hint 2s ease-in-out infinite; }
+.animate-spin-slow { animation: spin-slow 3s linear infinite; }
+
+/* ─── Input Styles ───────────────────────────────────── */
+input, textarea, select {
+  background: rgba(17, 8, 39, 0.8);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: white;
+  font-family: var(--font-body);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  outline: none;
+  width: 100%;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-primary-glow);
+}
+input::placeholder, textarea::placeholder {
+  color: var(--color-text-muted);
 }
