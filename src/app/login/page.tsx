@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { motion } from "motion/react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Lock, Key, User } from "lucide-react";
 import Link from "next/link";
 import { ParticleBackground } from "@/components/shared/ParticleBackground";
 import { GlowCard } from "@/components/shared/GlowCard";
+import { NeonButton } from "@/components/shared/NeonButton";
 
 const GoogleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -17,6 +19,27 @@ const GoogleIcon = () => (
 );
 
 export default function LoginPage() {
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    const correctUsername = "admin";
+    const correctPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "educatedgamer3admin";
+
+    if (username === correctUsername && password === correctPassword) {
+      localStorage.setItem("eg_admin_passcode", password);
+      // Redirect to admin panel
+      window.location.href = "/admin";
+    } else {
+      setError("Invalid admin username or passcode.");
+    }
+  };
+
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-[#030014] px-4 overflow-hidden">
       <ParticleBackground />
@@ -37,10 +60,10 @@ export default function LoginPage() {
         </Link>
 
         {/* Login Card */}
-        <GlowCard hover={false} className="p-8 text-center space-y-8 border-[var(--color-primary)]/20 bg-black/60 backdrop-blur-xl">
+        <GlowCard hover={false} className="p-8 text-center space-y-6 border-[var(--color-primary)]/20 bg-black/60 backdrop-blur-xl">
           <div className="space-y-2">
             <span className="px-2.5 py-0.5 rounded bg-[var(--color-primary)]/20 border border-[var(--color-primary)]/40 text-[9px] font-black text-white tracking-widest uppercase">
-              EG Portal
+              {isAdminMode ? "EG Command Portal" : "EG Player Portal"}
             </span>
             <h2
               className="text-3xl font-black italic tracking-tighter text-white"
@@ -49,25 +72,89 @@ export default function LoginPage() {
               EDUCATED <span className="text-[var(--color-primary-light)]">GAMER</span>
             </h2>
             <p className="text-xs text-gray-400">
-              Sign in to register rosters, track squad status, and claim giveaways.
+              {isAdminMode
+                ? "Enter administrator command credentials to gain authorization."
+                : "Sign in to register rosters, track squad status, and claim giveaways."}
             </p>
           </div>
 
-          <div className="space-y-4">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => signIn("google", { callbackUrl: "/" })}
-              className="w-full flex items-center justify-center gap-3 bg-white text-black font-black uppercase text-xs tracking-wider py-4 px-6 rounded-xl hover:bg-gray-100 transition-colors shadow-[0_4px_20px_rgba(255,255,255,0.15)] cursor-pointer"
-            >
-              <GoogleIcon />
-              Continue with Google
-            </motion.button>
-            
-            <div className="text-[10px] text-gray-500 leading-relaxed max-w-xs mx-auto">
-              By signing in, you agree to our fair play terms. Double-tap configs, emulator scripts, and macros are strictly monitored.
+          {!isAdminMode ? (
+            /* PLAYER SIGN IN OPTIONS */
+            <div className="space-y-4">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => signIn("google", { callbackUrl: "/" })}
+                className="w-full flex items-center justify-center gap-3 bg-white text-black font-black uppercase text-xs tracking-wider py-4 px-6 rounded-xl hover:bg-gray-100 transition-colors shadow-[0_4px_20px_rgba(255,255,255,0.15)] cursor-pointer"
+              >
+                <GoogleIcon />
+                Continue with Google
+              </motion.button>
+              
+              <div className="border-t border-white/5 pt-4">
+                <button
+                  onClick={() => setIsAdminMode(true)}
+                  className="text-xs text-gray-500 hover:text-[var(--color-primary-light)] transition-colors flex items-center gap-1.5 mx-auto font-semibold uppercase tracking-wider cursor-pointer"
+                >
+                  <Lock className="w-3.5 h-3.5" /> Access Admin Console
+                </button>
+              </div>
+
+              <div className="text-[10px] text-gray-500 leading-relaxed max-w-xs mx-auto">
+                By signing in, you agree to our fair play terms. Double-tap configs, emulator scripts, and macros are strictly monitored.
+              </div>
             </div>
-          </div>
+          ) : (
+            /* ADMIN SIGN IN FORM */
+            <form onSubmit={handleAdminLogin} className="space-y-4 text-left">
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-gray-500 uppercase tracking-widest font-black pl-1 flex items-center gap-1">
+                  <User className="w-3 h-3 text-[var(--color-primary-light)]" /> Username
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="admin"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-gray-500 uppercase tracking-widest font-black pl-1 flex items-center gap-1">
+                  <Key className="w-3 h-3 text-[var(--color-primary-light)]" /> Passcode
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+
+              {error && (
+                <p className="text-xs text-red-500 font-bold text-center">{error}</p>
+              )}
+
+              <div className="space-y-3 pt-2">
+                <NeonButton type="submit" variant="primary" className="w-full uppercase text-xs tracking-wider">
+                  Unlock Admin Console
+                </NeonButton>
+                
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAdminMode(false);
+                    setError("");
+                  }}
+                  className="w-full text-center text-xs text-gray-500 hover:text-white uppercase font-bold tracking-wider py-1 cursor-pointer"
+                >
+                  Go Back to Player Login
+                </button>
+              </div>
+            </form>
+          )}
         </GlowCard>
       </div>
     </div>

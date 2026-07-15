@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "motion/react";
 import { Menu, X, User, LogIn, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -114,23 +114,35 @@ export default function Navbar() {
             {/* Auth + Mobile Toggle */}
             <div className="flex items-center gap-3">
               {session?.user ? (
-                <Link
-                  href="/dashboard"
-                  className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-glass border border-glass-border hover:border-glass-hover transition-all duration-300"
-                >
-                  {session.user.image ? (
-                    <img
-                      src={session.user.image}
-                      alt={session.user.name || "User"}
-                      className="w-7 h-7 rounded-full border border-primary-500/30"
-                    />
-                  ) : (
-                    <User className="w-5 h-5 text-primary-400" />
-                  )}
-                  <span className="text-sm text-text-secondary">
-                    {session.user.name?.split(" ")[0] || "Player"}
-                  </span>
-                </Link>
+                <div className="hidden md:flex items-center gap-2">
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-glass border border-glass-border hover:border-glass-hover transition-all duration-300"
+                  >
+                    {session.user.image ? (
+                      <img
+                        src={session.user.image}
+                        alt={session.user.name || "User"}
+                        className="w-7 h-7 rounded-full border border-primary-500/30"
+                      />
+                    ) : (
+                      <User className="w-5 h-5 text-primary-400" />
+                    )}
+                    <span className="text-sm text-text-secondary">
+                      {session.user.name?.split(" ")[0] || "Player"}
+                    </span>
+                  </Link>
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem("eg_admin_passcode");
+                      signOut({ callbackUrl: "/" });
+                    }}
+                    className="p-2 rounded-lg bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 text-red-400 cursor-pointer transition-all"
+                    title="Sign Out"
+                  >
+                    <LogIn className="w-4 h-4 rotate-180" />
+                  </button>
+                </div>
               ) : (
                 <Link
                   href="/login"
@@ -225,17 +237,29 @@ export default function Navbar() {
                 })}
               </nav>
 
-              <div className="px-4 pb-6">
+              <div className="px-4 pb-6 space-y-3">
                 {session?.user ? (
-                  <Link
-                    href="/dashboard"
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl bg-glass border border-glass-border"
-                  >
-                    <User className="w-5 h-5 text-primary-400" />
-                    <span className="text-sm">
-                      {session.user.name || "Player"}
-                    </span>
-                  </Link>
+                  <>
+                    <Link
+                      href="/dashboard"
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl bg-glass border border-glass-border"
+                    >
+                      <User className="w-5 h-5 text-primary-400" />
+                      <span className="text-sm">
+                        {session.user.name || "Player"}
+                      </span>
+                    </Link>
+                    <button
+                      onClick={() => {
+                        localStorage.removeItem("eg_admin_passcode");
+                        signOut({ callbackUrl: "/" });
+                      }}
+                      className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-red-600/10 border border-red-500/20 text-red-400 text-sm font-semibold transition-all cursor-pointer"
+                    >
+                      <LogIn className="w-4 h-4 rotate-180" />
+                      Sign Out
+                    </button>
+                  </>
                 ) : (
                   <Link
                     href="/login"

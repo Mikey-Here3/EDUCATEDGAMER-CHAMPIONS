@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { getMyRegistrations } from "@/actions/registration.actions";
@@ -20,6 +20,7 @@ import {
   AlertCircle,
   MessageCircle,
   Sparkles,
+  LogOut,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -121,7 +122,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             {session.user.role === "ADMIN" && (
               <Link href="/admin">
                 <NeonButton variant="outline" size="sm">
@@ -134,6 +135,17 @@ export default function DashboardPage() {
                 Register New Team
               </NeonButton>
             </Link>
+            <NeonButton
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                localStorage.removeItem("eg_admin_passcode");
+                signOut({ callbackUrl: "/" });
+              }}
+              className="flex items-center gap-1.5 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-400"
+            >
+              <LogOut className="w-4 h-4" /> Sign Out
+            </NeonButton>
           </div>
         </div>
 
