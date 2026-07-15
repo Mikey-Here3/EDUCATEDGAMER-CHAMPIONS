@@ -83,17 +83,29 @@ export function RegisterForm({ tournament }: RegisterFormProps) {
     setSquadMembers(updated);
   };
 
-  // Simulated image upload (stores local base64/object URL for GvG MVP)
+  // Read image files as base64 string to store persistently in Neon PostgreSQL database
   const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>, type: "uid" | "payment") => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      if (type === "uid") {
-        setUidScreenshot(url);
-      } else {
-        setPaymentScreenshot(url);
+      if (file.size > 2.5 * 1024 * 1024) {
+        setErrorMsg("Screenshot size must be less than 2.5MB for database storage.");
+        return;
       }
-      setErrorMsg("");
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        if (type === "uid") {
+          setUidScreenshot(base64String);
+        } else {
+          setPaymentScreenshot(base64String);
+        }
+        setErrorMsg("");
+      };
+      reader.onerror = () => {
+        setErrorMsg("Failed to read image file.");
+      };
+      reader.readAsDataURL(file);
     }
   };
 
