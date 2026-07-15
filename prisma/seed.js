@@ -1,5 +1,11 @@
-const { PrismaClient } = require("./src/generated/prisma");
-const prisma = new PrismaClient();
+require("dotenv").config();
+const { Pool } = require("pg");
+const { PrismaPg } = require("@prisma/adapter-pg");
+const { PrismaClient } = require("../src/generated/prisma");
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   const slug = "br-ff-cup-s4";
@@ -14,7 +20,7 @@ async function main() {
     return;
   }
 
-  // Create the Free Fire 5000 Diamonds Season 4 Tournament
+  // Create the Free Fire 9000 Diamonds Season 4 Tournament
   const tournament = await prisma.tournament.create({
     data: {
       id: "br-ff-cup-s4-id",
@@ -48,4 +54,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
   });
