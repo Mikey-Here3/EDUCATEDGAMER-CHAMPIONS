@@ -507,11 +507,44 @@ export function RegisterForm({ tournament }: RegisterFormProps) {
           </div>
         </GlowCard>
 
-        {/* Global errors */}
+        {/* Global & Field validation errors */}
         {errorMsg && (
-          <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex items-center gap-3 text-red-400 text-sm">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <p>{errorMsg}</p>
+          <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex flex-col gap-2 text-red-400 text-sm">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <p className="font-bold">{errorMsg}</p>
+            </div>
+            {Object.keys(fieldErrors).length > 0 && (
+              <ul className="list-disc list-inside pl-8 text-xs space-y-1 text-red-300">
+                {Object.entries(fieldErrors).map(([field, errors]) => {
+                  // Format field name for better readability
+                  let label = field;
+                  if (field.startsWith("teamMembers.")) {
+                    const index = parseInt(field.split(".")[1], 10);
+                    const memberField = field.split(".")[2];
+                    label = `Player #${index + 2} (${memberField === "playerName" ? "Name" : memberField === "gamertag" ? "Nickname" : "UID"})`;
+                  } else if (field === "teamName") {
+                    label = "Guild Name";
+                  } else if (field === "playerName") {
+                    label = "Captain Name";
+                  } else if (field === "gamertag") {
+                    label = "Captain Nickname";
+                  } else if (field === "gameUID") {
+                    label = "Captain UID";
+                  } else if (field === "phone") {
+                    label = "WhatsApp Number";
+                  } else if (field === "email") {
+                    label = "Email Address";
+                  }
+                  
+                  return (
+                    <li key={field}>
+                      <span className="font-semibold uppercase tracking-wider">{label}</span>: {errors[0]}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
         )}
 
