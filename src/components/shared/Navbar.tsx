@@ -115,7 +115,7 @@ export default function Navbar() {
             <div className="flex items-center gap-3">
               {session?.user ? (
                 <Link
-                  href="/profile"
+                  href="/dashboard"
                   className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-glass border border-glass-border hover:border-glass-hover transition-all duration-300"
                 >
                   {session.user.image ? (
@@ -133,7 +133,7 @@ export default function Navbar() {
                 </Link>
               ) : (
                 <Link
-                  href="/api/auth/signin"
+                  href="/login"
                   className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500/10 border border-primary-500/30 text-primary-400 text-sm font-medium hover:bg-primary-500/20 hover:border-primary-400 transition-all duration-300"
                 >
                   <LogIn className="w-4 h-4" />
@@ -228,7 +228,7 @@ export default function Navbar() {
               <div className="px-4 pb-6">
                 {session?.user ? (
                   <Link
-                    href="/profile"
+                    href="/dashboard"
                     className="flex items-center gap-3 px-4 py-3 rounded-xl bg-glass border border-glass-border"
                   >
                     <User className="w-5 h-5 text-primary-400" />
@@ -238,7 +238,7 @@ export default function Navbar() {
                   </Link>
                 ) : (
                   <Link
-                    href="/api/auth/signin"
+                    href="/login"
                     className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white text-sm font-semibold shadow-[var(--shadow-neon-sm)]"
                   >
                     <LogIn className="w-4 h-4" />

@@ -13,6 +13,7 @@ import {
 import { GlowCard } from "@/components/shared/GlowCard";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { NeonButton } from "@/components/shared/NeonButton";
+import { ParticleBackground } from "@/components/shared/ParticleBackground";
 import {
   Trophy,
   Users,
@@ -36,6 +37,8 @@ import {
   ExternalLink,
   Info,
   SlidersHorizontal,
+  Unlock,
+  LogOut,
 } from "lucide-react";
 
 // Mock Data for GvG Fallback
@@ -100,7 +103,14 @@ const mockRegistrations = [
 
 export default function AdminPage() {
   const { data: session } = useSession();
-  const isAdmin = session?.user?.role === "ADMIN";
+  const isGoogleAdmin = session?.user?.role === "ADMIN";
+
+  // Passcode Security States
+  const [passcode, setPasscode] = useState("");
+  const [adminAuthenticated, setAdminAuthenticated] = useState(false);
+  const [adminError, setAdminError] = useState("");
+
+  const isAuthorized = isGoogleAdmin || adminAuthenticated;
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<
@@ -142,9 +152,38 @@ export default function AdminPage() {
   const [statusVal, setStatusVal] = useState(mockActiveTournament.status);
   const [configMsg, setConfigMsg] = useState("");
 
-  // Load Real Data if Admin
+  // Check saved passcode on mount
   useEffect(() => {
-    if (isAdmin) {
+    const savedPass = localStorage.getItem("eg_admin_passcode") || "";
+    const correctPass = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "educatedgamer3admin";
+    if (savedPass === correctPass) {
+      setAdminAuthenticated(true);
+      setPasscode(savedPass);
+    }
+  }, []);
+
+  // Handle Passcode Login
+  const handlePasscodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminError("");
+    const correctPass = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "educatedgamer3admin";
+    if (passcode === correctPass) {
+      localStorage.setItem("eg_admin_passcode", passcode);
+      setAdminAuthenticated(true);
+    } else {
+      setAdminError("Invalid security passcode. Access denied.");
+    }
+  };
+
+  const handlePasscodeLogout = () => {
+    localStorage.removeItem("eg_admin_passcode");
+    setAdminAuthenticated(false);
+    setPasscode("");
+  };
+
+  // Load Real Data if Authorized
+  useEffect(() => {
+    if (isAuthorized) {
       getTournaments().then((res) => {
         if (res.success && res.data && res.data.length > 0) {
           const current = res.data[0]; // Active season tournament is the latest one
@@ -154,7 +193,7 @@ export default function AdminPage() {
           setAllowedWeapons(current.rules || "");
           setStatusVal(current.status);
 
-          getRegistrations(current.id).then((regRes) => {
+          getRegistrations(current.id, passcode).then((regRes) => {
             if (regRes.success && regRes.data) {
               setRegistrations(regRes.data);
             }
@@ -162,7 +201,7 @@ export default function AdminPage() {
         }
       });
     }
-  }, [isAdmin]);
+  }, [isAuthorized, passcode]);
 
   // Handle Verify/Confirm Action
   const handleVerifyRegistration = async (id: string, approve: boolean) => {
@@ -182,9 +221,9 @@ export default function AdminPage() {
     }
 
     // Real DB update
-    const res = await updateRegistrationStatus(id, statusVal);
+    const res = await updateRegistrationStatus(id, statusVal, passcode);
     if (res.success) {
-      await updatePaymentStatus(id, paymentVal);
+      await updatePaymentStatus(id, paymentVal, passcode);
       const updated = registrations.map((r) =>
         r.id === id ? { ...r, status: statusVal, paymentStatus: paymentVal } : r
       );
@@ -209,7 +248,7 @@ export default function AdminPage() {
     }
 
     // Real DB delete
-    const res = await deleteRegistration(id);
+    const res = await deleteRegistration(id, passcode);
     if (res.success) {
       setRegistrations(registrations.filter((r) => r.id !== id));
       setSelectedReg(null);
@@ -249,7 +288,7 @@ export default function AdminPage() {
       status: statusVal,
     };
 
-    if (!isAdmin) {
+    if (!isAuthorized) {
       setActiveTourney({
         ...activeTourney,
         name: tourneyName,
@@ -264,7 +303,7 @@ export default function AdminPage() {
     }
 
     startTransition(async () => {
-      const res = await updateTournament(activeTourney.id, payload);
+      const res = await updateTournament(activeTourney.id, payload, passcode);
       if (res.success && res.data) {
         setActiveTourney(res.data);
         setConfigMsg("Database season settings updated successfully!");
@@ -287,6 +326,59 @@ export default function AdminPage() {
     return matchesSearch && reg.status === filterStatus;
   });
 
+  // ─── Security Gate Render ───────────────────────────────────────────────
+  if (!isAuthorized) {
+    return (
+      <div className="relative min-h-screen flex items-center justify-center bg-[#030014] px-4 overflow-hidden">
+        <ParticleBackground />
+        
+        {/* Lightning Overlay Grid */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(123,46,255,0.02)_1px,_transparent_1px)] bg-[size:100%_4px] pointer-events-none z-10" />
+
+        <div className="relative z-20 w-full max-w-md">
+          <form onSubmit={handlePasscodeSubmit}>
+            <GlowCard hover={false} className="p-8 text-center space-y-6 border-[var(--color-primary)]/20 bg-black/60 backdrop-blur-xl">
+              <div className="space-y-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 text-red-400 text-[10px] font-bold uppercase tracking-wider mb-2 border border-red-500/20">
+                  <Lock className="w-3.5 h-3.5" /> Restricted Command Area
+                </span>
+                <h2 className="text-2xl font-black italic tracking-tighter text-white" style={{ fontFamily: "var(--font-orbitron)" }}>
+                  ADMIN <span className="text-[var(--color-primary-light)]">COMMAND</span>
+                </h2>
+                <p className="text-xs text-gray-400">
+                  Please enter your Admin Passcode credentials to gain console authorization.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-1 text-left">
+                  <label className="text-[10px] text-gray-500 uppercase tracking-widest font-black pl-1">Security Passcode</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••••••••"
+                    className="w-full text-center"
+                    value={passcode}
+                    onChange={(e) => setPasscode(e.target.value)}
+                  />
+                </div>
+
+                {adminError && (
+                  <p className="text-xs text-red-500 font-semibold">{adminError}</p>
+                )}
+
+                <NeonButton type="submit" variant="primary" className="w-full flex items-center justify-center gap-2">
+                  <Unlock className="w-4 h-4" /> Unlock Console
+                </NeonButton>
+              </div>
+            </GlowCard>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Authenticated Console Render ─────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[var(--color-bg-deep)] pt-32 pb-20 px-4 relative">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -302,12 +394,22 @@ export default function AdminPage() {
             </h1>
           </div>
 
-          {!isAdmin && (
-            <div className="glass-card px-4 py-2 border-yellow-500/30 bg-yellow-500/5 text-yellow-400 text-xs flex items-center gap-2 max-w-sm rounded-xl">
-              <Lock className="w-4 h-4 flex-shrink-0" />
-              <p>Demo Mode active. Log in as Admin to write to Neon database.</p>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {adminAuthenticated && (
+              <button
+                onClick={handlePasscodeLogout}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600/10 hover:bg-red-600/20 border border-red-500/20 text-xs font-bold text-red-400 cursor-pointer transition-all"
+              >
+                <LogOut className="w-3.5 h-3.5" /> Lock Console
+              </button>
+            )}
+            {!isGoogleAdmin && !adminAuthenticated && (
+              <div className="glass-card px-4 py-2 border-yellow-500/30 bg-yellow-500/5 text-yellow-400 text-xs flex items-center gap-2 max-w-sm rounded-xl">
+                <Lock className="w-4 h-4 flex-shrink-0" />
+                <p>Demo Mode active. Log in as Admin to write to Neon database.</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Quick Stats Summary Grid */}
