@@ -1,5 +1,6 @@
 "use client";
 
+// Vercel Build Trigger: Google OAuth and Neon PostgreSQL config sync
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
