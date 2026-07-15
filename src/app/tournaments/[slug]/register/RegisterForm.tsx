@@ -65,6 +65,7 @@ export function RegisterForm({ tournament }: RegisterFormProps) {
   // Screenshots
   const [uidScreenshot, setUidScreenshot] = useState("");
   const [paymentScreenshot, setPaymentScreenshot] = useState("");
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const handleAddMember = () => {
     if (squadMembers.length >= 5) return;
@@ -453,27 +454,51 @@ export function RegisterForm({ tournament }: RegisterFormProps) {
             <div className="space-y-3">
               <label className="text-xs text-gray-400 uppercase font-bold tracking-wider">Captain UID Screenshot (Required)</label>
               <div className="flex items-center justify-center w-full">
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[var(--color-border)] rounded-xl cursor-pointer hover:border-[var(--color-primary)] transition-all bg-black/20 hover:bg-black/40">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
-                    {uidScreenshot ? (
-                      <div className="flex items-center gap-3">
-                        <img src={uidScreenshot} className="w-12 h-12 object-cover rounded-lg border border-[var(--color-border)]" alt="" />
-                        <span className="text-xs text-green-400 font-semibold">UID Proof attached</span>
+                {uidScreenshot ? (
+                  <div className="flex flex-col items-center justify-center w-full h-32 border border-[var(--color-primary)]/20 rounded-xl bg-black/40 p-4 space-y-2.5">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={uidScreenshot}
+                        className="w-16 h-10 object-cover rounded border border-white/10 hover:scale-105 cursor-pointer transition-all"
+                        alt="UID Proof attached"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setLightboxUrl(uidScreenshot);
+                        }}
+                      />
+                      <div className="text-left">
+                        <span className="text-xs text-green-400 font-semibold block">UID Proof attached</span>
+                        <button
+                          type="button"
+                          onClick={() => setLightboxUrl(uidScreenshot)}
+                          className="text-[10px] text-gray-400 hover:text-white underline cursor-pointer"
+                        >
+                          Click to Preview
+                        </button>
                       </div>
-                    ) : (
-                      <>
-                        <Upload className="w-6 h-6 text-gray-500 mb-2 mx-auto" />
-                        <p className="text-xs text-gray-400 font-medium">Attach captain in-game profile screenshot</p>
-                      </>
-                    )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setUidScreenshot("")}
+                      className="text-[10px] text-red-400 hover:text-red-300 font-bold uppercase tracking-wider cursor-pointer"
+                    >
+                      Remove & Upload Different
+                    </button>
                   </div>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={(e) => handleScreenshotChange(e, "uid")}
-                  />
-                </label>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[var(--color-border)] rounded-xl cursor-pointer hover:border-[var(--color-primary)] transition-all bg-black/20 hover:bg-black/40">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
+                      <Upload className="w-6 h-6 text-gray-500 mb-2 mx-auto" />
+                      <p className="text-xs text-gray-400 font-medium">Attach captain in-game profile screenshot</p>
+                    </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={(e) => handleScreenshotChange(e, "uid")}
+                    />
+                  </label>
+                )}
               </div>
             </div>
 
@@ -481,27 +506,51 @@ export function RegisterForm({ tournament }: RegisterFormProps) {
             <div className="space-y-3">
               <label className="text-xs text-gray-400 uppercase font-bold tracking-wider">Entry Fee Proof (Optional)</label>
               <div className="flex items-center justify-center w-full">
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[var(--color-border)] rounded-xl cursor-pointer hover:border-[var(--color-primary)] transition-all bg-black/20 hover:bg-black/40">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
-                    {paymentScreenshot ? (
-                      <div className="flex items-center gap-3">
-                        <img src={paymentScreenshot} className="w-12 h-12 object-cover rounded-lg border border-[var(--color-border)]" alt="" />
-                        <span className="text-xs text-green-400 font-semibold">Payment Proof attached</span>
+                {paymentScreenshot ? (
+                  <div className="flex flex-col items-center justify-center w-full h-32 border border-[var(--color-primary)]/20 rounded-xl bg-black/40 p-4 space-y-2.5">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={paymentScreenshot}
+                        className="w-16 h-10 object-cover rounded border border-white/10 hover:scale-105 cursor-pointer transition-all"
+                        alt="Payment Proof attached"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setLightboxUrl(paymentScreenshot);
+                        }}
+                      />
+                      <div className="text-left">
+                        <span className="text-xs text-green-400 font-semibold block">Payment Proof attached</span>
+                        <button
+                          type="button"
+                          onClick={() => setLightboxUrl(paymentScreenshot)}
+                          className="text-[10px] text-gray-400 hover:text-white underline cursor-pointer"
+                        >
+                          Click to Preview
+                        </button>
                       </div>
-                    ) : (
-                      <>
-                        <Upload className="w-6 h-6 text-gray-500 mb-2 mx-auto" />
-                        <p className="text-xs text-gray-400 font-medium">Attach transaction screenshot (if applicable)</p>
-                      </>
-                    )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentScreenshot("")}
+                      className="text-[10px] text-red-400 hover:text-red-300 font-bold uppercase tracking-wider cursor-pointer"
+                    >
+                      Remove & Upload Different
+                    </button>
                   </div>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={(e) => handleScreenshotChange(e, "payment")}
-                  />
-                </label>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[var(--color-border)] rounded-xl cursor-pointer hover:border-[var(--color-primary)] transition-all bg-black/20 hover:bg-black/40">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
+                      <Upload className="w-6 h-6 text-gray-500 mb-2 mx-auto" />
+                      <p className="text-xs text-gray-400 font-medium">Attach transaction screenshot (if applicable)</p>
+                    </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={(e) => handleScreenshotChange(e, "payment")}
+                    />
+                  </label>
+                )}
               </div>
             </div>
           </div>
@@ -566,6 +615,35 @@ export function RegisterForm({ tournament }: RegisterFormProps) {
           )}
         </NeonButton>
       </form>
+
+      {/* Lightbox image zoom preview modal */}
+      <AnimatePresence>
+        {lightboxUrl && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 cursor-zoom-out"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative max-w-4xl max-h-[90vh]"
+            >
+              <img
+                src={lightboxUrl}
+                alt="Full Size Verification"
+                className="max-w-full max-h-[90vh] object-contain rounded-lg border border-white/10"
+              />
+              <button
+                onClick={() => setLightboxUrl(null)}
+                className="absolute top-4 right-4 p-2 rounded-full bg-black/75 hover:bg-black text-white cursor-pointer"
+              >
+                ✕
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
