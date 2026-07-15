@@ -9,15 +9,7 @@ export default auth((req) => {
   const isAuthenticated = !!req.auth;
   const userRole = req.auth?.user?.role;
 
-  // ─── Admin Route Protection ──────────────────────────────────────────────
-  if (pathname.startsWith("/admin")) {
-    if (!isAuthenticated) {
-      return NextResponse.redirect(new URL("/login", req.url));
-    }
-    if (userRole !== "ADMIN") {
-      return NextResponse.redirect(new URL("/", req.url));
-    }
-  }
+
 
   // ─── Dashboard Route Protection ──────────────────────────────────────────
   if (pathname.startsWith("/dashboard")) {
